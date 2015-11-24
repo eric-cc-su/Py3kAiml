@@ -43,4 +43,4 @@ Quick & dirty example (assuming you've downloaded the
 
 	# Loop forever, reading user input from the command
 	# line and printing responses.
-	while True: print k.respond(raw_input("> "))
+	while True: print k.respond(str(input("> ")))
