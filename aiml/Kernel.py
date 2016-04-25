@@ -215,6 +215,25 @@ class Kernel:
         """Set the text encoding used when loading AIML files (Latin-1, UTF-8, etc.)."""
         self._textEncoding = encoding
 
+    def loadSubsDict(self, section, dict_items):
+        """
+        Load a substitutions dict
+
+        :param section: string - substitutions section being loaded
+        :param dict: dict - key, value for substitutions
+        :return: None
+        """
+        # Add a new WordSub instance for this section.  If one already
+        # exists, delete it.
+        if section in self._subbers:
+            del(self._subbers[section])
+        self._subbers[section] = WordSub()
+        # iterate over the key,value pairs and add them to the subber
+
+        dict_items = dict_items.items() if type(dict_items) != list else dict_items
+        for k,v in dict_items:
+            self._subbers[section][k] = v
+
     def loadSubs(self, filename):
         """Load a substitutions file.
 
@@ -226,17 +245,18 @@ class Kernel:
         """
         inFile = open(filename)
         parser = ConfigParser()
-        parser.readfp(inFile, filename)
+        parser.read_file(inFile, filename)
         inFile.close()
         for s in parser.sections():
-            # Add a new WordSub instance for this section.  If one already
-            # exists, delete it.
-            if s in self._subbers:
-                del(self._subbers[s])
-            self._subbers[s] = WordSub()
-            # iterate over the key,value pairs and add them to the subber
-            for k,v in parser.items(s):
-                self._subbers[s][k] = v
+            self.loadSubsDict(s, parser.items(s))
+            # # Add a new WordSub instance for this section.  If one already
+            # # exists, delete it.
+            # if s in self._subbers:
+            #     del(self._subbers[s])
+            # self._subbers[s] = WordSub()
+            # # iterate over the key,value pairs and add them to the subber
+            # for k,v in parser.items(s):
+            #     self._subbers[s][k] = v
 
     def _addSession(self, sessionID):
         """Create a new session with the specified ID string."""
