@@ -273,11 +273,12 @@ class AimlHandler(ContentHandler):
 
     def _characters(self, ch):
         text = str(ch)
-        if self._state == self._STATE_InsidePattern and "<set>" not in text:
+        # if self._state == self._STATE_InsidePattern and "<set>" not in text:
+        if self._state == self._STATE_InsidePattern and "<set>":
             self._currentPattern += text
-        # Replace the set category with "SET_category_SET"
-        elif self._insidePatternSet or self._state == self._STATE_InsidePattern and "<set>" in text:
-            self._currentPattern += text.replace("<set>","SET_").replace("</set","_SET")
+        # # Replace the set category with "SET_category_SET"
+        # elif self._insidePatternSet or self._state == self._STATE_InsidePattern and "<set>" in text:
+        #     self._currentPattern += text.replace("<set>","SET_").replace("</set","_SET")
         elif self._state == self._STATE_InsideThat:
             self._currentThat += text
         elif self._state == self._STATE_InsideTemplate:
