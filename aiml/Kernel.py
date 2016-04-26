@@ -298,6 +298,12 @@ class Kernel:
         will be loaded and learned.
 
         """
+        if os.path.isdir(filename):
+            if self._verboseMode: print("ERROR: {} is a directory. Must be a file".format(filename))
+            return
+        if not os.path.isfile(filename):
+            if self._verboseMode: print("ERROR: File {} does not exist".format(filename))
+            return
         for f in glob.glob(filename):
             if self._verboseMode: print("Loading %s..." % f, end=' ')
             start = time.clock()
