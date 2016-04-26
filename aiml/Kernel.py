@@ -299,10 +299,7 @@ class Kernel:
 
         """
         if os.path.isdir(filename):
-            if self._verboseMode: print("ERROR: {} is a directory. Must be a file".format(filename))
-            return
-        if not os.path.isfile(filename):
-            if self._verboseMode: print("ERROR: File {} does not exist".format(filename))
+            if self._verboseMode: print("ERROR: "+filename+" is a directory. Must be a file or file pattern")
             return
         for f in glob.glob(filename):
             if self._verboseMode: print("Loading %s..." % f, end=' ')
@@ -322,6 +319,10 @@ class Kernel:
             # Parsing was successful.
             if self._verboseMode:
                 print("done (%.2f seconds)" % (time.clock() - start))
+        # No files found
+        if len(glob.glob(filename)) == 0:
+            if self._verboseMode: print("ERROR: File "+filename+" does not exist")
+            return
 
     def respond(self, inpt, sessionID = _globalSessionID, debug=False):
         """Return the Kernel's response to the input string."""
