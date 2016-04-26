@@ -1,3 +1,7 @@
+Apr 2016: Updating code to AIML2.0 standards
+
+Eric Su
+
 Updating the code for Python 3.2
 
 Jason Ayres

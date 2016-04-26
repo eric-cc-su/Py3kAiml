@@ -28,7 +28,7 @@ class AimlHandler(ContentHandler):
         self._currentPattern = ""
         self._currentThat    = ""
         self._currentTopic   = ""
-        self._insidePatternSet = False
+        self._insidePatternSet = False # Indicates inside a <set> that's within <pattern>
         self._insideTopic = False
         self._currentUnknown = "" # the name of the current unknown element
 
@@ -393,6 +393,14 @@ class AimlHandler(ContentHandler):
             # </set> tags are legal in the InsidePattern and InsideTemplate state
             if self._state not in [self._STATE_InsidePattern, self._STATE_InsideTemplate]:
                 raise AimlParserError(name+" - Unexpected </set> tag "+self._location())
+            # Close a set within a template (should go to element below it in the stack)
+            elif self._state == self._STATE_InsideTemplate:
+                try:
+                    if self._elemStack[-1][0] == "set":
+                        elem = self._elemStack.pop()
+                        self._elemStack[-1].append(elem)
+                except:
+                    pass
             # Don't change state
         elif name == "that" and self._state == self._STATE_InsideThat:
             # </that> tags are only allowed inside <template> elements or in
@@ -517,7 +525,9 @@ class AimlHandler(ContentHandler):
         # non-block-style variant) or <random>: these elements can only
         # contain <li> subelements.
         elif (parent == "random" or nonBlockStyleCondition) and name!="li":
-            raise AimlParserError(("<%s> elements can only contain <li> subelements "%parent)+self._location())
+            # Raise error if the subelement is not a <set name=>, <set var=>, or <star/>
+            if not (nonBlockStyleCondition and name == "set" and "name" not in attr and "var" not in attr) or name != "star":
+                raise AimlParserError(("<%s> elements can only contain <li> subelements "%parent)+self._location())
         # Special-case test for <li> elements, which can only be contained
         # by non-block-style <condition> and <random> elements, and whose
         # required attributes are dependent upon which attributes are
