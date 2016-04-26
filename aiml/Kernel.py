@@ -323,7 +323,7 @@ class Kernel:
             if self._verboseMode:
                 print("done (%.2f seconds)" % (time.clock() - start))
 
-    def respond(self, inpt, sessionID = _globalSessionID):
+    def respond(self, inpt, sessionID = _globalSessionID, debug=False):
         """Return the Kernel's response to the input string."""
         if len(inpt) == 0:
             return ""
@@ -353,7 +353,7 @@ class Kernel:
             self.setPredicate(self._inputHistory, inputHistory, sessionID)
             
             # Fetch the response
-            response = self._respond(s, sessionID)
+            response, debug_info = self._respond(s, sessionID, debug)
 
             # add the data from this exchange to the history lists
             outputHistory = self.getPredicate(self._outputHistory, sessionID)
@@ -372,17 +372,17 @@ class Kernel:
         self._respondLock.release()
         try: 
             if sys.version_info.major < 3:
-                return finalResponse.encode(self._textEncoding)
+                finalResponse = (finalResponse.encode(self._textEncoding), debug_info) if debug else finalResponse.encode(self._textEncoding)
             else:
-                return finalResponse
+                return (finalResponse, debug_info) if debug else finalResponse
         except UnicodeError: 
-            return finalResponse
+            return (finalResponse, debug_info) if debug else finalResponse
 
     # This version of _respond() just fetches the response for some input.
     # It does not mess with the input and output histories.  Recursive calls
     # to respond() spawned from tags like <srai> should call this function
     # instead of respond().
-    def _respond(self, inpt, sessionID):
+    def _respond(self, inpt, sessionID, debug):
         """Private version of respond(), does the real work."""
         if len(inpt) == 0:
             return ""
@@ -416,6 +416,8 @@ class Kernel:
 
         # Determine the final response.
         response = ""
+        if debug:
+            elem, patmatch = self._brain.match(subbedInput, subbedThat, subbedTopic, debug)
         elem = self._brain.match(subbedInput, subbedThat, subbedTopic)
         if elem is None:
             if self._verboseMode:
@@ -431,8 +433,10 @@ class Kernel:
         inputStack = self.getPredicate(self._inputStack, sessionID)
         inputStack.pop()
         self.setPredicate(self._inputStack, inputStack, sessionID)
-        
-        return response
+
+        if debug:
+            return response, (subbedInput, subbedThat, subbedTopic, elem, patmatch)
+        return response, None
 
     def _processElement(self,elem, sessionID):
         """Process an AIML element.

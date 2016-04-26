@@ -123,13 +123,13 @@ class PatternMgr:
 			self._templateCount += 1	
 		node[self._TEMPLATE] = template
 
-	def match(self, pattern, that, topic):
+	def match(self, pattern, that, topic, debug=False):
 		"""Return the template which is the closest match to pattern. The
 		'that' parameter contains the bot's previous response. The 'topic'
 		parameter contains the current topic of conversation.
 
 		Returns None if no template is found.
-		
+
 		"""
 		if len(pattern) == 0:
 			return None
@@ -144,9 +144,11 @@ class PatternMgr:
 		if topic.strip() == "": topic = "ULTRABOGUSDUMMYTOPIC" # 'topic' must never be empty
 		topicInput = topic.upper()
 		topicInput = re.sub(self._puncStripRE, " ", topicInput)
-		
+
 		# Pass the input off to the recursive call
 		patMatch, template = self._match(inpt.split(), thatInput.split(), topicInput.split(), self._root)  # @UnusedVariable
+		if debug:
+			return template, patMatch
 		return template
 
 	def star(self, starType, pattern, that, topic, index):
