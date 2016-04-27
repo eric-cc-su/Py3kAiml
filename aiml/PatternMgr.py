@@ -368,13 +368,16 @@ class PatternMgr:
 
 			set_match = self.whichPatternSet(first, root_pattern_sets)
 			# Continue into matched pattern set\
-			try:
-				pattern, template = self._match(suffix, thatWords, topicWords, root[self._PATTERN_SET]["set_"+set_match+"_set"])
-				if template is not None:
-					newPattern = [self._PATTERN_SET] + pattern
-					return (newPattern, template)
-			except KeyError:
-				print(root, first, set_match)
+			if set_match:
+				try:
+					pattern, template = self._match(suffix, thatWords, topicWords, root[self._PATTERN_SET]["set_"+set_match+"_set"])
+					if template is not None:
+						newPattern = [self._PATTERN_SET] + pattern
+						return (newPattern, template)
+				except KeyError or TypeError:
+					print(root)
+					print(first)
+					print(set_match)
 
 		# No matches were found.
 		return (None, None)			
