@@ -2,13 +2,11 @@
 
 This documentation is meant to explain changes for v0.9+
 
-All documentation is:
-
-*\*As of v0.9*
+All documentation is *as of* ***v0.9***
 
 Other documentation:
-[AIML 2.0 Draft Specification](https://docs.google.com/document/d/1wNT25hJRyupcG51aO89UcQEiG-HkXRXusukADpFnDs4/pub)
-[AIML 2.0 Sets and Maps](https://docs.google.com/document/d/1DWHiOOcda58CflDZ0Wsm1CgP3Es6dpicb4MBbbpwzEk/pub)
+- [AIML 2.0 Draft Specification](https://docs.google.com/document/d/1wNT25hJRyupcG51aO89UcQEiG-HkXRXusukADpFnDs4/pub)
+- [AIML 2.0 Sets and Maps](https://docs.google.com/document/d/1DWHiOOcda58CflDZ0Wsm1CgP3Es6dpicb4MBbbpwzEk/pub)
 
 ## AIML Sets - PatternSet
 
