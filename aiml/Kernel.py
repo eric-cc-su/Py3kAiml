@@ -244,11 +244,15 @@ class Kernel:
 
         """
         inFile = open(filename)
-        parser = ConfigParser()
+        parser = ConfigParser(allow_no_value=True)
         parser.read_file(inFile, filename)
         inFile.close()
+        patternSet = False or os.path.splitext(filename)[1] == ".set" # File is a .set file
         for s in parser.sections():
-            self.loadSubsDict(s, parser.items(s))
+            if patternSet:
+                self._brain.setPatternSet(s, [k.upper() for k,v in parser.items(s)])
+            else:
+                self.loadSubsDict(s, parser.items(s))
             # # Add a new WordSub instance for this section.  If one already
             # # exists, delete it.
             # if s in self._subbers:
@@ -302,7 +306,13 @@ class Kernel:
             if self._verboseMode: print("ERROR: "+filename+" is a directory. Must be a file or file pattern")
             return
         for f in glob.glob(filename):
-            if self._verboseMode: print("Loading %s..." % f, end=' ')
+            if self._verboseMode: print("Loading %s...\n" % f, end=' ')
+            # Load .set files, don't parse
+            if os.path.splitext(f)[1] == ".set":
+                start = time.clock()
+                self.loadSubs(f)
+                if self._verboseMode: print("done (%.2f seconds)" % (time.clock() - start))
+                continue
             start = time.clock()
             # Load and parse the AIML file.
             parser = AimlParser.create_parser()
@@ -354,7 +364,10 @@ class Kernel:
             self.setPredicate(self._inputHistory, inputHistory, sessionID)
             
             # Fetch the response
-            response, debug_info = self._respond(s, sessionID, debug)
+            if debug:
+                response, debug_info = self._respond(s, sessionID, debug)
+            else:
+                response = self._respond(s, sessionID, debug)
 
             # add the data from this exchange to the history lists
             outputHistory = self.getPredicate(self._outputHistory, sessionID)
@@ -373,17 +386,17 @@ class Kernel:
         self._respondLock.release()
         try: 
             if sys.version_info.major < 3:
-                finalResponse = (finalResponse.encode(self._textEncoding), debug_info) if debug else finalResponse.encode(self._textEncoding)
+                finalResponse = finalResponse.encode(self._textEncoding)
             else:
-                return (finalResponse, debug_info) if debug else finalResponse
+                return finalResponse # Returning debug_info has been disabled for now
         except UnicodeError: 
-            return (finalResponse, debug_info) if debug else finalResponse
+            return finalResponse
 
     # This version of _respond() just fetches the response for some input.
     # It does not mess with the input and output histories.  Recursive calls
     # to respond() spawned from tags like <srai> should call this function
     # instead of respond().
-    def _respond(self, inpt, sessionID, debug):
+    def _respond(self, inpt, sessionID, debug=False):
         """Private version of respond(), does the real work."""
         if len(inpt) == 0:
             return ""
@@ -437,7 +450,7 @@ class Kernel:
 
         if debug:
             return response, (subbedInput, subbedThat, subbedTopic, elem, patmatch)
-        return response, None
+        return response
 
     def _processElement(self,elem, sessionID):
         """Process an AIML element.

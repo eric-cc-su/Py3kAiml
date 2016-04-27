@@ -275,11 +275,8 @@ class AimlHandler(ContentHandler):
         text = str(ch)
         if self._state == self._STATE_InsidePattern:
             # Just in case
-            if "<set>" in text:
-                self._currentPattern += text.replace("<set>","SET_").replace("</set>","_SET")
-            # We are inside a <set> within the <pattern>
-            elif self._insidePatternSet:
-                self._currentPattern += "SET_"+text+"_SET"
+            if self._insidePatternSet and "<set>" not in text:
+                self._currentPattern += "<set>"+text+"</set>"
             else:
                 self._currentPattern += text
         elif self._state == self._STATE_InsideThat:
