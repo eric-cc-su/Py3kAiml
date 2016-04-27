@@ -17,8 +17,6 @@ class AimlHandler(ContentHandler):
     _STATE_AfterThat      = 6
     _STATE_InsideTemplate = 7
     _STATE_AfterTemplate  = 8
-    _STATE_InsideSet      = 9
-    _STATE_AfterSet       = 10
 
     def __init__(self, encoding = "UTF-8"):
         self.categories = {}
@@ -30,6 +28,7 @@ class AimlHandler(ContentHandler):
         self._currentPattern = ""
         self._currentThat    = ""
         self._currentTopic   = ""
+        self._insidePatternSet = False # Indicates inside a <set> that's within <pattern>
         self._insideTopic = False
         self._currentUnknown = "" # the name of the current unknown element
 
@@ -133,7 +132,7 @@ class AimlHandler(ContentHandler):
         if name == "aiml":
             # <aiml> tags are only legal in the OutsideAiml state
             if self._state != self._STATE_OutsideAiml:
-                raise AimlParserError("Unexpected <aiml> tag "+self._location())
+                raise AimlParserError(name+" - Unexpected <aiml> tag "+self._location())
             self._state = self._STATE_InsideAiml
             self._insideTopic = False
             self._currentTopic = ""
@@ -170,7 +169,7 @@ class AimlHandler(ContentHandler):
         elif name == "category":
             # <category> tags are only legal in the InsideAiml state
             if self._state != self._STATE_InsideAiml:
-                raise AimlParserError("Unexpected <category> tag "+self._location())
+                raise AimlParserError(name+" - Unexpected <category> tag "+self._location())
             self._state = self._STATE_InsideCategory
             self._currentPattern = ""
             self._currentThat = ""
@@ -181,7 +180,7 @@ class AimlHandler(ContentHandler):
         elif name == "pattern":
             # <pattern> tags are only legal in the InsideCategory state
             if self._state != self._STATE_InsideCategory:
-                raise AimlParserError("Unexpected <pattern> tag "+self._location())
+                raise AimlParserError(name+" - Unexpected <pattern> tag "+self._location())
             self._state = self._STATE_InsidePattern
         elif name == "that" and self._state == self._STATE_AfterPattern:
             # <that> are legal either inside a <template> element, or
@@ -192,7 +191,7 @@ class AimlHandler(ContentHandler):
             # <template> tags are only legal in the AfterPattern and AfterThat
             # states
             if self._state not in [self._STATE_AfterPattern, self._STATE_AfterThat]:
-                raise AimlParserError("Unexpected <template> tag "+self._location())
+                raise AimlParserError(name+" - Unexpected <template> tag "+self._location())
             # if no <that> element was specified, it is implicitly set to *
             if self._state == self._STATE_AfterPattern:
                 self._currentThat = "*"
@@ -200,20 +199,21 @@ class AimlHandler(ContentHandler):
             self._elemStack.append(['template',{}])
             self._pushWhitespaceBehavior(attr)
         elif self._state == self._STATE_InsidePattern:
+            # Only <star/> is allowed inside <pattern>...<set></set>...</pattern>
+            if self._insidePatternSet and name not in ["set","star"]:
+                raise AimlParserError(("InsidePatternSet - Unexpected <%s> tag " % name)+self._location())
+
             # Certain tags are allowed inside <pattern> elements.
             if name == "bot" and "name" in attr and attr["name"] == "name":
                 # Insert a special character string that the PatternMgr will
                 # replace with the bot's name.
                 self._currentPattern += " BOT_NAME "
-            # <set>*</set> is allowed inside a <pattern> element but NOT <set name=""/>
-            elif name == "set" and not "name" in attr:
-                self._state = self._STATE_InsideSet
+            # <set>*</set> is allowed inside a <pattern> element but NOT <set name=""> or <set var="">
+            elif name == "set" and "name" not in attr and "var" not in attr:
+                self._insidePatternSet = True
+                pass
             else:
-                raise AimlParserError(("Unexpected <%s> tag " % name)+self._location())
-        elif self._state == self._STATE_InsideSet:
-            # No tags are allowed inside <set> elements
-            if name not in ["star"]:
-                raise AimlParserError(("InsideSet - Unexpected <%s> tag " % name)+self._location())
+                raise AimlParserError(("InsidePattern - Unexpected <%s> tag " % name)+self._location())
         elif self._state == self._STATE_InsideThat:
             # Certain tags are allowed inside <that> elements.
             if name == "bot" and "name" in attr and attr["name"] == "name":
@@ -221,7 +221,7 @@ class AimlHandler(ContentHandler):
                 # replace with the bot's name.
                 self._currentThat += " BOT_NAME "
             else:
-                raise AimlParserError(("Unexpected <%s> tag " % name)+self._location())
+                raise AimlParserError(("InsideThat - Unexpected <%s> tag " % name)+self._location())
         elif self._state == self._STATE_InsideTemplate and name in self._validInfo:
             # Starting a new element inside the current pattern. First
             # we need to convert 'attr' into a native Python dictionary,
@@ -248,7 +248,7 @@ class AimlHandler(ContentHandler):
                 self._currentUnknown = name
             else:
                 # Otherwise, unknown elements are grounds for error!
-                raise AimlParserError(("Unexpected <%s> tag " % name)+self._location())
+                raise AimlParserError(("Unknown "+str(self._state)+"- Unexpected <%s> tag " % name)+self._location())
 
     def characters(self, ch):
         # Wrapper around _characters which catches errors in _characters()
@@ -273,12 +273,12 @@ class AimlHandler(ContentHandler):
 
     def _characters(self, ch):
         text = str(ch)
-        if self._state == self._STATE_InsidePattern and "<set>" not in text:
-
-            self._currentPattern += text
-        # Replace the set category with "SET_cat_SET"
-        elif self._state == self._STATE_InsideSet:
-            self._currentPattern += "SET_{}_SET".format(text)
+        if self._state == self._STATE_InsidePattern:
+            # Just in case
+            if self._insidePatternSet and "<set>" not in text:
+                self._currentPattern += "<set>"+text+"</set>"
+            else:
+                self._currentPattern += text
         elif self._state == self._STATE_InsideThat:
             self._currentThat += text
         elif self._state == self._STATE_InsideTemplate:
@@ -365,20 +365,20 @@ class AimlHandler(ContentHandler):
         if name == "aiml":
             # </aiml> tags are only legal in the InsideAiml state
             if self._state != self._STATE_InsideAiml:
-                raise AimlParserError("Unexpected </aiml> tag "+self._location())
+                raise AimlParserError(name+" - Unexpected </aiml> tag "+self._location())
             self._state = self._STATE_OutsideAiml
             self._whitespaceBehaviorStack.pop()
         elif name == "topic":
             # </topic> tags are only legal in the InsideAiml state, and
             # only if _insideTopic is true.
             if self._state != self._STATE_InsideAiml or not self._insideTopic:
-                raise AimlParserError("Unexpected </topic> tag "+self._location())
+                raise AimlParserError(name+" - Unexpected </topic> tag "+self._location())
             self._insideTopic = False
             self._currentTopic = ""
         elif name == "category":
             # </category> tags are only legal in the AfterTemplate state
             if self._state != self._STATE_AfterTemplate:
-                raise AimlParserError("Unexpected </category> tag "+self._location())
+                raise AimlParserError(name+" - Unexpected </category> tag "+self._location())
             self._state = self._STATE_InsideAiml
             # End the current category.  Store the current pattern/that/topic and
             # element in the categories dictionary.
@@ -388,13 +388,21 @@ class AimlHandler(ContentHandler):
         elif name == "pattern":
             # </pattern> tags are only legal in the InsidePattern state
             if self._state != self._STATE_InsidePattern:
-                raise AimlParserError("Unexpected </pattern> tag "+self._location())
+                raise AimlParserError(name+" - Unexpected </pattern> tag "+self._location())
             self._state = self._STATE_AfterPattern
         elif name == "set":
-            # </set> tags are only legal in the InsideSet state
-            if self._state != self._STATE_InsideSet:
-                raise AimlParserError("Name set ({state}) - Unexpected </set> tag {location}".format(state=self._state, location=self._location()))
-            self._state = self._STATE_AfterSet
+            # </set> tags are legal in the InsidePattern and InsideTemplate state
+            if self._state not in [self._STATE_InsidePattern, self._STATE_InsideTemplate]:
+                raise AimlParserError(name+" - Unexpected </set> tag "+self._location())
+            # Close a set within a template (should go to element below it in the stack)
+            elif self._state == self._STATE_InsideTemplate:
+                try:
+                    if self._elemStack[-1][0] == "set":
+                        elem = self._elemStack.pop()
+                        self._elemStack[-1].append(elem)
+                except:
+                    pass
+            # Don't change state
         elif name == "that" and self._state == self._STATE_InsideThat:
             # </that> tags are only allowed inside <template> elements or in
             # the InsideThat state.  This clause handles the latter case.
@@ -402,20 +410,19 @@ class AimlHandler(ContentHandler):
         elif name == "template":
             # </template> tags are only allowed in the InsideTemplate state.
             if self._state != self._STATE_InsideTemplate:
-                raise AimlParserError("Unexpected </template> tag "+self._location())
+                raise AimlParserError(name+" - Unexpected </template> tag "+self._location())
             self._state = self._STATE_AfterTemplate
             self._whitespaceBehaviorStack.pop()
         elif self._state == self._STATE_InsidePattern:
             # Certain tags are allowed inside <pattern> elements.
             if name not in ["bot", "set"]:
-                raise AimlParserError(("Unexpected </%s> tag " % name)+self._location())
-        elif self._state == self._STATE_InsideSet:
-            # No tags are allowed inside <set> elements
-            raise AimlParserError(("Unexpected </%s> tag " % name)+self._location())
+                raise AimlParserError(("InsidePattern - Unexpected </%s> tag " % name)+self._location())
+            elif name == "set":
+                self._insidePatternSet = False
         elif self._state == self._STATE_InsideThat:
             # Certain tags are allowed inside <that> elements.
             if name not in ["bot"]:
-                raise AimlParserError(("Unexpected </%s> tag " % name)+self._location())
+                raise AimlParserError(("InsideThat - Unexpected </%s> tag " % name)+self._location())
         elif self._state == self._STATE_InsideTemplate:
             # End of an element inside the current template.  Append the
             # element at the top of the stack onto the one beneath it.
@@ -427,7 +434,7 @@ class AimlHandler(ContentHandler):
             if elem[0] == "condition": self._foundDefaultLiStack.pop()
         else:
             # Unexpected closing tag
-            raise AimlParserError(("Unexpected </%s> tag " % name)+self._location())
+            raise AimlParserError(("Unknown "+str(self._state)+"- Unexpected </%s> tag " % name)+self._location())
 
     # A dictionary containing a validation information for each AIML
     # element. The keys are the names of the elements.  The values are a
@@ -519,14 +526,16 @@ class AimlHandler(ContentHandler):
         # non-block-style variant) or <random>: these elements can only
         # contain <li> subelements.
         elif (parent == "random" or nonBlockStyleCondition) and name!="li":
-            raise AimlParserError(("<%s> elements can only contain <li> subelements "%parent)+self._location())
+            # Raise error if the subelement is not a <set name=>, <set var=>, or <star/>
+            if not (nonBlockStyleCondition and name == "set" and "name" not in attr and "var" not in attr) or name != "star":
+                raise AimlParserError(("<%s> elements can only contain <li> subelements "%parent)+self._location())
         # Special-case test for <li> elements, which can only be contained
         # by non-block-style <condition> and <random> elements, and whose
         # required attributes are dependent upon which attributes are
         # present in the <condition> parent.
         elif name=="li":
             if not (parent=="random" or nonBlockStyleCondition):
-                raise AimlParserError(("Unexpected <li> element contained by <%s> element "%parent)+self._location())
+                raise AimlParserError(("{} - Unexpected <li> element contained by <%s> element "%parent)+self._location())
             if nonBlockStyleCondition:
                 if "name" in parentAttr:
                     # Single-predicate condition.  Each <li> element except the

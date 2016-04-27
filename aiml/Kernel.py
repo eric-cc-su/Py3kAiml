@@ -244,11 +244,15 @@ class Kernel:
 
         """
         inFile = open(filename)
-        parser = ConfigParser()
+        parser = ConfigParser(allow_no_value=True)
         parser.read_file(inFile, filename)
         inFile.close()
+        patternSet = False or os.path.splitext(filename)[1] == ".set" # File is a .set file
         for s in parser.sections():
-            self.loadSubsDict(s, parser.items(s))
+            if patternSet:
+                self._brain.setPatternSet(s, [k.upper() for k,v in parser.items(s)])
+            else:
+                self.loadSubsDict(s, parser.items(s))
             # # Add a new WordSub instance for this section.  If one already
             # # exists, delete it.
             # if s in self._subbers:
@@ -298,8 +302,17 @@ class Kernel:
         will be loaded and learned.
 
         """
+        if os.path.isdir(filename):
+            if self._verboseMode: print("ERROR: "+filename+" is a directory. Must be a file or file pattern")
+            return
         for f in glob.glob(filename):
-            if self._verboseMode: print("Loading %s..." % f, end=' ')
+            if self._verboseMode: print("Loading %s...\n" % f, end=' ')
+            # Load .set files, don't parse
+            if os.path.splitext(f)[1] == ".set":
+                start = time.clock()
+                self.loadSubs(f)
+                if self._verboseMode: print("done (%.2f seconds)" % (time.clock() - start))
+                continue
             start = time.clock()
             # Load and parse the AIML file.
             parser = AimlParser.create_parser()
@@ -316,8 +329,12 @@ class Kernel:
             # Parsing was successful.
             if self._verboseMode:
                 print("done (%.2f seconds)" % (time.clock() - start))
+        # No files found
+        if len(glob.glob(filename)) == 0:
+            if self._verboseMode: print("ERROR: File "+filename+" does not exist")
+            return
 
-    def respond(self, inpt, sessionID = _globalSessionID):
+    def respond(self, inpt, sessionID = _globalSessionID, debug=False):
         """Return the Kernel's response to the input string."""
         if len(inpt) == 0:
             return ""
@@ -347,7 +364,10 @@ class Kernel:
             self.setPredicate(self._inputHistory, inputHistory, sessionID)
             
             # Fetch the response
-            response = self._respond(s, sessionID)
+            if debug:
+                response, debug_info = self._respond(s, sessionID, debug)
+            else:
+                response = self._respond(s, sessionID, debug)
 
             # add the data from this exchange to the history lists
             outputHistory = self.getPredicate(self._outputHistory, sessionID)
@@ -366,9 +386,9 @@ class Kernel:
         self._respondLock.release()
         try: 
             if sys.version_info.major < 3:
-                return finalResponse.encode(self._textEncoding)
+                finalResponse = finalResponse.encode(self._textEncoding)
             else:
-                return finalResponse
+                return finalResponse # Returning debug_info has been disabled for now
         except UnicodeError: 
             return finalResponse
 
@@ -376,7 +396,7 @@ class Kernel:
     # It does not mess with the input and output histories.  Recursive calls
     # to respond() spawned from tags like <srai> should call this function
     # instead of respond().
-    def _respond(self, inpt, sessionID):
+    def _respond(self, inpt, sessionID, debug=False):
         """Private version of respond(), does the real work."""
         if len(inpt) == 0:
             return ""
@@ -410,6 +430,8 @@ class Kernel:
 
         # Determine the final response.
         response = ""
+        if debug:
+            elem, patmatch = self._brain.match(subbedInput, subbedThat, subbedTopic, debug)
         elem = self._brain.match(subbedInput, subbedThat, subbedTopic)
         if elem is None:
             if self._verboseMode:
@@ -425,7 +447,9 @@ class Kernel:
         inputStack = self.getPredicate(self._inputStack, sessionID)
         inputStack.pop()
         self.setPredicate(self._inputStack, inputStack, sessionID)
-        
+
+        if debug:
+            return response, (subbedInput, subbedThat, subbedTopic, elem, patmatch)
         return response
 
     def _processElement(self,elem, sessionID):

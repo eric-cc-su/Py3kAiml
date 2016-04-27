@@ -1,3 +1,7 @@
+version 0.9
+ - Allow loading substitutions from dictionary objects
+ - Allow <set> tags within <pattern> for multi-value replacement
+
 version 0.8.6
  - Fixed WorbSub module to work with words that consist entirely of punctuation :-).
  - Fixed PatternMgr module to replace non-alphanumerics with whitespace instead of simply

@@ -16,18 +16,44 @@ class PatternMgr:
 	_THAT       = 3
 	_TOPIC		= 4
 	_BOT_NAME   = 5
+	_PATTERN_SET= 6
 	
 	def __init__(self):
 		self._root = {}
+		self._patternSets = {} # Store the possible pattern_sets
 		self._templateCount = 0
 		self._botName = "Nameless"
 		punctuation = "\"`~!@#$%^&*()-_=+[{]}\|;:',<.>/?"
 		self._puncStripRE = re.compile("[" + re.escape(punctuation) + "]")
 		self._whitespaceRE = re.compile("\s+", re.LOCALE | re.UNICODE)
+		self._patternSetRE = re.compile("set_(\w+)_set")
 
 	def numTemplates(self):
 		"""Return the number of templates currently stored."""
 		return self._templateCount
+
+	def setPatternSet(self, pset, list):
+		"""Clear pset if pset exists"""
+		self._patternSets[pset] = []
+		self._patternSets[pset] += list
+
+	def whichPatternSet(self, pattern, psets=None):
+		"""
+		Determine if pattern is in one of psets.
+		Will return first patternSet match. Unforgiving of patternSet overlaps
+		(patternSets should not share values)
+
+		:param pattern: string - the pattern to look up
+		:param psets: listOf string - list of patternSets to look for pattern
+		:return: string - name of patternSet pattern was found in
+		"""
+		psets = psets or self._patternSets.keys()
+		try:
+			result = [set for set in psets if pattern in self._patternSets[set]]
+			return None if len(result) == 0 else result[0]
+		except KeyError:
+			pass
+		return None
 
 	def setBotName(self, name):
 		"""Set the name of the bot, used to match <bot name="name"> tags in
@@ -83,6 +109,13 @@ class PatternMgr:
 				key = self._STAR
 			elif key == "BOT_NAME":
 				key = self._BOT_NAME
+			# Found an in-pattern set - <set>category</set>
+			# double-save: Save self._PATTERN_SET as key first, save set category as child key -> {6:{"set_category_set": ...}}
+			elif re.match(r"<set>(\w+)<\/set>", key):
+				if self._PATTERN_SET not in node:
+					node[self._PATTERN_SET] = {}
+					node = node[self._PATTERN_SET]
+				key = "set_"+re.match(r"<set>(\w+)<\/set>", key).group(1)+"_set"
 			if key not in node:
 				node[key] = {}
 			node = node[key]
@@ -123,19 +156,22 @@ class PatternMgr:
 			self._templateCount += 1	
 		node[self._TEMPLATE] = template
 
-	def match(self, pattern, that, topic):
+	def match(self, pattern, that, topic, debug=False):
 		"""Return the template which is the closest match to pattern. The
 		'that' parameter contains the bot's previous response. The 'topic'
 		parameter contains the current topic of conversation.
 
 		Returns None if no template is found.
-		
+
 		"""
 		if len(pattern) == 0:
 			return None
 		# Mutilate the input.  Remove all punctuation and convert the
 		# text to all caps.
 		inpt = pattern.upper()
+		# LOWER patternSet indicators
+		while self._patternSetRE.search(inpt):
+			inpt = inpt.replace(self._patternSetRE.search(inpt).group(), self._patternSetRE.search(inpt).group().lower())
 		inpt = re.sub(self._puncStripRE, " ", inpt)
 		if that.strip() == "": that = "ULTRABOGUSDUMMYTHAT" # 'that' must never be empty
 		thatInput = that.upper()
@@ -144,9 +180,11 @@ class PatternMgr:
 		if topic.strip() == "": topic = "ULTRABOGUSDUMMYTOPIC" # 'topic' must never be empty
 		topicInput = topic.upper()
 		topicInput = re.sub(self._puncStripRE, " ", topicInput)
-		
+
 		# Pass the input off to the recursive call
 		patMatch, template = self._match(inpt.split(), thatInput.split(), topicInput.split(), self._root)  # @UnusedVariable
+		if debug:
+			return template, patMatch
 		return template
 
 	def star(self, starType, pattern, that, topic, index):
@@ -322,6 +360,21 @@ class PatternMgr:
 				if template is not None:
 					newPattern = [self._STAR] + pattern
 					return (newPattern, template)
+
+		# check pattern set
+		if self._PATTERN_SET in root:
+			# Find all pattern-sets in current root
+			root_pattern_sets = self._patternSetRE.findall(str(list(root[self._PATTERN_SET].keys())))
+
+			set_match = self.whichPatternSet(first, root_pattern_sets)
+			# Continue into matched pattern set\
+			try:
+				pattern, template = self._match(suffix, thatWords, topicWords, root[self._PATTERN_SET]["set_"+set_match+"_set"])
+				if template is not None:
+					newPattern = [self._PATTERN_SET] + pattern
+					return (newPattern, template)
+			except KeyError:
+				print(root, first, set_match)
 
 		# No matches were found.
 		return (None, None)			

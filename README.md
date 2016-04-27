@@ -1,7 +1,18 @@
+Py3kAiml
+===
+
+This repository has been forked from [huntersan9/Py3kAiml](https://github.com/huntersan9/Py3kAiml). 
+The objective of this fork is to update PyAiml for AIML2.0 compatibility.
+
+Apr 2016: Starting v0.9 - Updating code to AIML2.0 standards
+
+Eric Su
+
+## Original README
+
 Updating the code for Python 3.2
 
 Jason Ayres
-
 
 PyAIML -- The Python AIML Interpreter
 author: Cort Stratton (cort@users.sourceforge.net)
