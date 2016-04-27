@@ -395,6 +395,8 @@ class AimlHandler(ContentHandler):
             if self._state not in [self._STATE_InsidePattern, self._STATE_InsideTemplate]:
                 raise AimlParserError(name+" - Unexpected </set> tag "+self._location())
             # Close a set within a template (should go to element below it in the stack)
+            elif self._state == self._STATE_InsidePattern:
+                self._insidePatternSet = False
             elif self._state == self._STATE_InsideTemplate:
                 try:
                     if self._elemStack[-1][0] == "set":
