@@ -4,6 +4,8 @@ Py3kAiml
 This repository has been forked from [huntersan9/Py3kAiml](https://github.com/huntersan9/Py3kAiml). 
 The objective of this fork is to update PyAiml for AIML2.0 compatibility.
 
+Additional notes can be viewed in [DOCS.md](DOCS.md)
+
 Apr 2016: Starting v0.9 - Updating code to AIML2.0 standards
 
 Eric Su
