@@ -1,4 +1,4 @@
-Py3kAiml
+PyAiml2
 ===
 
 This repository has been forked from [huntersan9/Py3kAiml](https://github.com/huntersan9/Py3kAiml). 
