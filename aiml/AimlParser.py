@@ -429,7 +429,10 @@ class AimlHandler(ContentHandler):
             # End of an element inside the current template.  Append the
             # element at the top of the stack onto the one beneath it.
             elem = self._elemStack.pop()
-            self._elemStack[-1].append(elem)
+            try:
+                self._elemStack[-1].append(elem)
+            except IndexError:
+                self._elemStack.append(elem)
             self._whitespaceBehaviorStack.pop()
             # If the element was a condition, pop an item off the
             # foundDefaultLiStack as well.
@@ -529,8 +532,8 @@ class AimlHandler(ContentHandler):
         # contain <li> subelements.
         elif (parent == "random" or nonBlockStyleCondition) and name!="li":
             # Raise error if the subelement is not a <set name=>, <set var=>, or <star/>
-            if not (nonBlockStyleCondition and name == "set" and "name" not in attr and "var" not in attr) or name != "star":
-                raise AimlParserError(("<%s> elements can only contain <li> subelements "%parent)+self._location())
+            if (name == "set" and "name" not in attr and "var" not in attr) and name not in ["star", "value", "think"]:
+                raise AimlParserError(("Found <%s>, <%s>. <%s> elements can only contain <li> subelements "% (name, str(attr), parent))+self._location())
         # Special-case test for <li> elements, which can only be contained
         # by non-block-style <condition> and <random> elements, and whose
         # required attributes are dependent upon which attributes are

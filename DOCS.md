@@ -24,9 +24,27 @@ should be matched against.
 
 ### Best Practices
 
-- Sets must be written as `.set` files in Windows-style [INI format](Windows-style INI format) where the 
+- Sets should be written as `.set` files in Windows-style [INI format](Windows-style INI format) where the 
 section title is the set name. With this format, multiple sets can be contained within one .set file as the name of the
 .set file is not used in constructing the set.
+- The alternative, accepted formatting of `.set` files is to write the set as a list of lists. The first line should
+be an opening bracket `[` and each line should be a list of the words in each phrase. **There should be no spaces. Each 
+word should be surrounded by quotation marks without any spaces**. **THE NAME OF THE SET FILE WILL BE THE NAME OF THE SET**
+
+
+    file /path/to/foobar.set
+    
+    [
+    ["foo"],
+    ["bar"],
+    ["foo", "bar"],
+    ]
+    
+    BECOMES: 
+    
+    {"foobar": ["foo", "bar", "foo bar"]}
+
+
 - Sets should not share values. If a pattern matches more than one set (e.g. 'superheroes' and 'marvel'), only one set 
 will be considered when pattern matching.
 

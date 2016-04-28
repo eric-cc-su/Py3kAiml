@@ -9,6 +9,7 @@ from .WordSub import WordSub
 from configparser import ConfigParser
 import copy
 import glob
+import json
 import os
 import random
 import re
@@ -244,7 +245,7 @@ class Kernel:
                 setitem = re.match(r"\[((\"\w+\"(, ?)?)+)\],", line)
                 setitem = setitem.group(1).replace("\"","").replace(",","") if setitem else None
                 if setitem and setitem != "fooz":
-                    newlist.append(setitem)
+                    newlist.append(setitem.upper())
         self.loadSetList(category, newlist)
 
     def loadSubsDict(self, section, dict_items):
@@ -275,22 +276,39 @@ class Kernel:
         substituter.
 
         """
-        patternSet = False or os.path.splitext(filename)[1] == ".set" # File is a .set file
-        inFile = open(filename)
-        try:
-            parser = ConfigParser(allow_no_value=True)
-            parser.read_file(inFile, filename)
-        except Exception as e:
-            if patternSet:
-                self.parseload_set_file(filename)
-            else:
-                print("ERROR: "+str(e))
-        inFile.close()
-        for s in parser.sections():
-            if patternSet:
-                self.loadSetList(s, [k.upper() for k,v in parser.items(s)])
-            else:
-                self.loadSubsDict(s, parser.items(s))
+        if os.path.isdir(filename):
+            if self._verboseMode: print("ERROR: "+filename+" is a directory. Must be a file or file pattern")
+            return
+        for f in glob.glob(filename):
+            if self._verboseMode: print("Loading %s...\n" % f, end=' ')
+            start = time.clock()
+            patternSet = False or os.path.splitext(f)[1] == ".set" # File is a .set file
+            inFile = open(f)
+            try:
+                parser = ConfigParser(allow_no_value=True)
+                parser.read_file(inFile, f)
+                inFile.close()
+                if len(parser.items(parser.sections()[0])) == 0:
+                    print("ERROR: File contains no contents for the section")
+                    continue
+            except Exception as e:
+                if patternSet:
+                    self.parseload_set_file(f)
+                    if self._verboseMode: print("done (%.2f seconds)" % (time.clock() - start))
+                    continue
+                else:
+                    print("ERROR: "+str(e))
+
+            for s in parser.sections():
+                if patternSet:
+                    self.loadSetList(s, [k.upper() for k,v in parser.items(s)])
+                else:
+                    self.loadSubsDict(s, parser.items(s))
+            if self._verboseMode: print("done (%.2f seconds)" % (time.clock() - start))
+        # No files found
+        if len(glob.glob(filename)) == 0:
+            if self._verboseMode: print("ERROR: File "+filename+" does not exist")
+            return
             # # Add a new WordSub instance for this section.  If one already
             # # exists, delete it.
             # if s in self._subbers:
