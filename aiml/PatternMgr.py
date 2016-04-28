@@ -114,7 +114,6 @@ class PatternMgr:
             elif key == "BOT_NAME":
                 key = self._BOT_NAME
             # Found an in-pattern set - <set>category</set>
-            # double-save: Save self._PATTERN_SET as key first, save set category as child key -> {6:{"set_category_set": ...}}
             elif re.match(r"<set>(\w+)<\/set>", key):
                 key = "set_"+re.match(r"<set>(\w+)<\/set>", key).group(1)+"_set"
             if key not in node:
@@ -246,7 +245,7 @@ class PatternMgr:
             if j == len(patMatch):
                 break
             if not foundTheRightStar:
-                if patMatch[j] in [self._STAR, self._UNDERSCORE]: #we got a star
+                if patMatch[j] in [self._STAR, self._UNDERSCORE] or self._patternSetRE.match(patMatch[j]): #we got a star
                     numStars += 1
                     if numStars == index:
                         # This is the star we care about.
