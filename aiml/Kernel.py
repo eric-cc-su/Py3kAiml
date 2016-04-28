@@ -216,6 +216,37 @@ class Kernel:
         """Set the text encoding used when loading AIML files (Latin-1, UTF-8, etc.)."""
         self._textEncoding = encoding
 
+    def loadSetList(self, section, list_items):
+        """
+        Load pattern set list. Shell for PatternMgr's setPatternSet method
+
+        :param section: string - pattern set being loaded
+        :param list_items: list - values for the pattern set
+        :return: None
+        """
+        self._brain.setPatternSet(section, list_items)
+
+    def parseload_set_file(self, filepath):
+        """
+        Parse set file with lines in format ["foo"] or ["foo", "bar"] = "foo bar" and load to brain
+
+        :param filepath: string - the absolute filepath
+        :return: None or dictionary
+        """
+        newlist = []
+        try:
+            category = os.path.splitext(filepath)[0][filepath.rindex("/")+1:]
+        except ValueError:
+            category = os.path.splitext(filepath)[0]
+
+        with open(filepath, 'r') as properties:
+            for line in properties:
+                setitem = re.match(r"\[((\"\w+\"(, ?)?)+)\],", line)
+                setitem = setitem.group(1).replace("\"","").replace(",","") if setitem else None
+                if setitem and setitem != "fooz":
+                    newlist.append(setitem)
+        self.loadSetList(category, newlist)
+
     def loadSubsDict(self, section, dict_items):
         """
         Load a substitutions dict
@@ -236,7 +267,7 @@ class Kernel:
             self._subbers[section][k] = v
 
     def loadSubs(self, filename):
-        """Load a substitutions file.
+        """Load a substitution or set file.
 
         The file must be in the Windows-style INI format (see the
         standard ConfigParser module docs for information on this
@@ -244,14 +275,20 @@ class Kernel:
         substituter.
 
         """
-        inFile = open(filename)
-        parser = ConfigParser(allow_no_value=True)
-        parser.read_file(inFile, filename)
-        inFile.close()
         patternSet = False or os.path.splitext(filename)[1] == ".set" # File is a .set file
+        inFile = open(filename)
+        try:
+            parser = ConfigParser(allow_no_value=True)
+            parser.read_file(inFile, filename)
+        except Exception as e:
+            if patternSet:
+                self.parseload_set_file(filename)
+            else:
+                print("ERROR: "+str(e))
+        inFile.close()
         for s in parser.sections():
             if patternSet:
-                self._brain.setPatternSet(s, [k.upper() for k,v in parser.items(s)])
+                self.loadSetList(s, [k.upper() for k,v in parser.items(s)])
             else:
                 self.loadSubsDict(s, parser.items(s))
             # # Add a new WordSub instance for this section.  If one already
