@@ -80,6 +80,7 @@ class PatternMgr:
             outFile = open(filename, "wb")
             marshal.dump(self._templateCount, outFile)
             marshal.dump(self._botName, outFile)
+            marshal.dump(self._patternSets, outFile)
             marshal.dump(self._root, outFile)
             outFile.close()
         except Exception as e:
@@ -92,6 +93,7 @@ class PatternMgr:
             inFile = open(filename, "rb")
             self._templateCount = marshal.load(inFile)
             self._botName = marshal.load(inFile)
+            self._patternSets = marshal.load(inFile)
             self._root = marshal.load(inFile)
             inFile.close()
         except Exception as e:
