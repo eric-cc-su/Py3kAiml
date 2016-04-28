@@ -33,6 +33,7 @@ class Kernel:
         self._verboseMode = True
         self._version = "PyAIML 0.8.6"
         self._brain = PatternMgr()
+        self._debug = False
         self._respondLock = threading.RLock()
         self._textEncoding = "utf-8"
 
@@ -335,6 +336,9 @@ class Kernel:
             return
 
     def respond(self, inpt, sessionID = _globalSessionID, debug=False):
+        self._debug = debug
+        self._brain._debug = debug
+
         """Return the Kernel's response to the input string."""
         if len(inpt) == 0:
             return ""
@@ -364,10 +368,7 @@ class Kernel:
             self.setPredicate(self._inputHistory, inputHistory, sessionID)
             
             # Fetch the response
-            if debug:
-                response, debug_info = self._respond(s, sessionID, debug)
-            else:
-                response = self._respond(s, sessionID, debug)
+            response = self._respond(s, sessionID)
 
             # add the data from this exchange to the history lists
             outputHistory = self.getPredicate(self._outputHistory, sessionID)
@@ -388,15 +389,15 @@ class Kernel:
             if sys.version_info.major < 3:
                 finalResponse = finalResponse.encode(self._textEncoding)
             else:
-                return finalResponse # Returning debug_info has been disabled for now
-        except UnicodeError: 
+                return finalResponse
+        except UnicodeError:
             return finalResponse
 
     # This version of _respond() just fetches the response for some input.
     # It does not mess with the input and output histories.  Recursive calls
     # to respond() spawned from tags like <srai> should call this function
     # instead of respond().
-    def _respond(self, inpt, sessionID, debug=False):
+    def _respond(self, inpt, sessionID):
         """Private version of respond(), does the real work."""
         if len(inpt) == 0:
             return ""
@@ -430,8 +431,6 @@ class Kernel:
 
         # Determine the final response.
         response = ""
-        if debug:
-            elem, patmatch = self._brain.match(subbedInput, subbedThat, subbedTopic, debug)
         elem = self._brain.match(subbedInput, subbedThat, subbedTopic)
         if elem is None:
             if self._verboseMode:
@@ -448,8 +447,6 @@ class Kernel:
         inputStack.pop()
         self.setPredicate(self._inputStack, inputStack, sessionID)
 
-        if debug:
-            return response, (subbedInput, subbedThat, subbedTopic, elem, patmatch)
         return response
 
     def _processElement(self,elem, sessionID):
