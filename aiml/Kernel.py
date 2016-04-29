@@ -217,7 +217,7 @@ class Kernel:
         """Set the text encoding used when loading AIML files (Latin-1, UTF-8, etc.)."""
         self._textEncoding = encoding
 
-    def loadSetList(self, section, list_items):
+    def loadSetList(self, section, pset_dict):
         """
         Load pattern set list. Shell for PatternMgr's setPatternSet method
 
@@ -225,28 +225,49 @@ class Kernel:
         :param list_items: list - values for the pattern set
         :return: None
         """
-        self._brain.setPatternSet(section, list_items)
+        self._brain.setPatternSet(section, pset_dict)
 
-    def parseload_set_file(self, filepath):
+    def loadSets(self, filename):
         """
         Parse set file with lines in format ["foo"] or ["foo", "bar"] = "foo bar" and load to brain
 
         :param filepath: string - the absolute filepath
         :return: None or dictionary
         """
-        newlist = []
-        try:
-            category = os.path.splitext(filepath)[0][filepath.rindex("/")+1:]
-        except ValueError:
-            category = os.path.splitext(filepath)[0]
 
-        with open(filepath, 'r') as properties:
-            for line in properties:
-                setitem = re.match(r"\[((\"\w+\"(, ?)?)+)\],", line)
-                setitem = setitem.group(1).replace("\"","").replace(",","") if setitem else None
-                if setitem and setitem != "fooz":
-                    newlist.append(setitem.upper())
-        self.loadSetList(category, newlist)
+        if os.path.isdir(filename):
+            if self._verboseMode: print("ERROR: "+filename+" is a directory. Must be a file or file pattern")
+            return
+        for f in glob.glob(filename):
+            if os.path.splitext(f)[1] != ".set":
+                print("ERROR: "+filename+" is not a set file")
+                continue
+            if self._verboseMode: print("Loading %s...\n" % f, end=' ')
+            start = time.clock()
+
+            newsetdict = {}
+            try:
+                category = os.path.splitext(f)[0][f.rindex("/")+1:]
+            except ValueError:
+                category = os.path.splitext(f)[0]
+
+            with open(f, 'r') as properties:
+                for line in properties:
+                    setitem = re.match(r"\[(\"\w+\",? ?)+\]", line)
+                    setitem = None if not setitem else json.loads(setitem.group())
+                    if setitem and not (len(setitem) == 1 and setitem[0] == "fooz"):
+                        subdict = {}
+                        key = setitem[0]
+                        while len(setitem) > 0:
+                            subdict = {setitem[-1]: subdict}
+                            setitem = setitem[:-1]
+                        newsetdict[key] = subdict[key]
+            self.loadSetList(category, newsetdict)
+            if self._verboseMode: print("done (%.2f seconds)" % (time.clock() - start))
+        # No files found
+        if len(glob.glob(filename)) == 0:
+            if self._verboseMode: print("ERROR: File "+filename+" does not exist")
+            return
 
     def loadSubsDict(self, section, dict_items):
         """
@@ -268,7 +289,7 @@ class Kernel:
             self._subbers[section][k] = v
 
     def loadSubs(self, filename):
-        """Load a substitution or set file.
+        """Load a substitution
 
         The file must be in the Windows-style INI format (see the
         standard ConfigParser module docs for information on this
@@ -280,9 +301,11 @@ class Kernel:
             if self._verboseMode: print("ERROR: "+filename+" is a directory. Must be a file or file pattern")
             return
         for f in glob.glob(filename):
+            if os.path.splitext(f)[1] != ".substitution":
+                print("ERROR: "+filename+" is not a substitution file")
+                continue
             if self._verboseMode: print("Loading %s...\n" % f, end=' ')
             start = time.clock()
-            patternSet = False or os.path.splitext(f)[1] == ".set" # File is a .set file
             inFile = open(f)
             try:
                 parser = ConfigParser(allow_no_value=True)
@@ -292,31 +315,15 @@ class Kernel:
                     print("ERROR: File contains no contents for the section")
                     continue
             except Exception as e:
-                if patternSet:
-                    self.parseload_set_file(f)
-                    if self._verboseMode: print("done (%.2f seconds)" % (time.clock() - start))
-                    continue
-                else:
-                    print("ERROR: "+str(e))
+                print("ERROR: "+str(e))
 
             for s in parser.sections():
-                if patternSet:
-                    self.loadSetList(s, [k.upper() for k,v in parser.items(s)])
-                else:
-                    self.loadSubsDict(s, parser.items(s))
+                self.loadSubsDict(s, parser.items(s))
             if self._verboseMode: print("done (%.2f seconds)" % (time.clock() - start))
         # No files found
         if len(glob.glob(filename)) == 0:
             if self._verboseMode: print("ERROR: File "+filename+" does not exist")
             return
-            # # Add a new WordSub instance for this section.  If one already
-            # # exists, delete it.
-            # if s in self._subbers:
-            #     del(self._subbers[s])
-            # self._subbers[s] = WordSub()
-            # # iterate over the key,value pairs and add them to the subber
-            # for k,v in parser.items(s):
-            #     self._subbers[s][k] = v
 
     def _addSession(self, sessionID):
         """Create a new session with the specified ID string."""

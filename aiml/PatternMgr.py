@@ -22,6 +22,7 @@ class PatternMgr:
         self._debug = False
         self._root = {}
         self._patternSets = {} # Store the possible pattern_sets
+        self._inPatternSet = 0 # How deep into a pattern_set we are
         self._templateCount = 0
         self._botName = "Nameless"
         punctuation = "\"`~!@#$%^&*()-_=+[{]}\|;:',<.>/?"
@@ -33,10 +34,9 @@ class PatternMgr:
         """Return the number of templates currently stored."""
         return self._templateCount
 
-    def setPatternSet(self, pset, list):
+    def setPatternSet(self, pset, pset_dict):
         """Clear pset if pset exists"""
-        self._patternSets[pset] = []
-        self._patternSets[pset] += list
+        self._patternSets[pset] = pset_dict
 
     def whichPatternSet(self, pattern, psets=None):
         """
