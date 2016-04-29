@@ -38,7 +38,7 @@ class PatternMgr:
         """Clear pset if pset exists"""
         self._patternSets[pset] = pset_dict
 
-    def whichPatternSet(self, pattern, psets=None):
+    def whichPatternSet(self, words, psets=None):
         """
         Determine if pattern is in one of psets.
         Will return first patternSet match. Unforgiving of patternSet overlaps
@@ -51,10 +51,13 @@ class PatternMgr:
         psets = psets or self._patternSets.keys()
         # ensure the set name exists (to avoid stupid KeyErrors)
         psets = [set for set in psets if set in self._patternSets.keys()]
+        #NOTE: Overlap in sets may occur where "hello" is in set 1 and "hello world" in set 2
         try:
-            result = [set for set in psets if pattern in self._patternSets[set]]
-            if len(result) > 0:
-                return result[0]
+            firstmatch =[set for set in psets if words[0] in self._patternSets[set].keys()]
+            # result = [set for set in psets if words in self._patternSets[set]]
+            if len(firstmatch) > 0:
+                # unforgiving first set match found
+                return firstmatch[0]
         except KeyError:
             pass
         return None
@@ -361,20 +364,15 @@ class PatternMgr:
             # Find all pattern-sets in current root
             root_pattern_sets = self._patternSetRE.findall(str(list(root.keys())))
 
-            set_match = self.whichPatternSet(first, root_pattern_sets)
+            set_match = self.whichPatternSet(words, root_pattern_sets)
             # Continue into matched pattern set\
             if set_match:
-                # try:
                 pattern, template = self._match(suffix, thatWords, topicWords, root["set_"+set_match+"_set"])
                 if template is not None:
                     newPattern = ["set_"+set_match+"_set"] + pattern
                     if self._debug:
                         print("PATTERNSET - ", first, "\nsuffix:", suffix,  "\nnewPattern: ",newPattern)
                     return (newPattern, template)
-                # except KeyError or TypeError:
-                #     print(root)
-                #     print(first)
-                #     print(set_match)
 
         # check star
         if self._STAR in root:

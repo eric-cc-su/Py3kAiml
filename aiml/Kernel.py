@@ -373,7 +373,7 @@ class Kernel:
             # Load .set files, don't parse
             if os.path.splitext(f)[1] == ".set":
                 start = time.clock()
-                self.loadSubs(f)
+                self.loadSets(f)
                 if self._verboseMode: print("done (%.2f seconds)" % (time.clock() - start))
                 continue
             start = time.clock()
