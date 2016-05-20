@@ -8,6 +8,20 @@ Other documentation:
 - [AIML 2.0 Draft Specification](https://docs.google.com/document/d/1wNT25hJRyupcG51aO89UcQEiG-HkXRXusukADpFnDs4/pub)
 - [AIML 2.0 Sets and Maps](https://docs.google.com/document/d/1DWHiOOcda58CflDZ0Wsm1CgP3Es6dpicb4MBbbpwzEk/pub)
 
+## Bot Properties 
+
+Included with v0.9 is the ability to load `.properties` files that define the bot's predicates. These properties can
+be saved in the bot's brain file to prevent repetitive loading/re-loading of the bot properties. 
+
+The bot properties file should have the file extension `.properties` and follow the following format:
+    
+    [
+    ["name", "Bot"],
+    ["birthday", "January 1, 2000"],
+    ["birthplace", "Boston, Massachusetts"],
+    ]
+
+
 ## AIML Sets - PatternSet
 
 One of the new features in AIML 2.0 is the ability to match inputs with sets of words and phrases.
