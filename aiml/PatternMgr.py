@@ -21,10 +21,10 @@ class PatternMgr:
     def __init__(self):
         self._debug = False
         self._root = {}
+        self._botProperties = {} # Set up the bot properties
         self._patternSets = {} # Store the possible pattern_sets
         self._inPatternSet = 0 # How deep into a pattern_set we are
         self._templateCount = 0
-        self._botName = "Nameless"
         punctuation = "\"`~!@#$%^&*()-_=+[{]}\|;:',<.>/?"
         self._puncStripRE = re.compile("[" + re.escape(punctuation) + "]")
         self._whitespaceRE = re.compile("\s+", re.LOCALE | re.UNICODE)
@@ -53,7 +53,7 @@ class PatternMgr:
         psets = [set for set in psets if set in self._patternSets.keys()]
         #NOTE: Overlap in sets may occur where "hello" is in set 1 and "hello world" in set 2
         try:
-            firstmatch =[set for set in psets if words[0] in self._patternSets[set].keys()]
+            firstmatch =[set for set in psets if words[0] in self._patternSets[set]]
             # result = [set for set in psets if words in self._patternSets[set]]
             if len(firstmatch) > 0:
                 # unforgiving first set match found
@@ -62,13 +62,11 @@ class PatternMgr:
             pass
         return None
 
-    def setBotName(self, name):
-        """Set the name of the bot, used to match <bot name="name"> tags in
-        patterns.  The name must be a single word!
+    def getBotProperty(self, key):
+        return self._botProperties.get(key)
 
-        """
-        # Collapse a multi-word name into a single word
-        self._botName = str(" ".join(name.split()))
+    def setBotProperty(self, key, value):
+        self._botProperties[key] = str(" ".join(value.split()))
 
     def dump(self):
         """Print all learned patterns, for debugging purposes."""
@@ -82,7 +80,7 @@ class PatternMgr:
         try:
             outFile = open(filename, "wb")
             marshal.dump(self._templateCount, outFile)
-            marshal.dump(self._botName, outFile)
+            marshal.dump(self._botProperties, outFile)
             marshal.dump(self._patternSets, outFile)
             marshal.dump(self._root, outFile)
             outFile.close()
@@ -95,7 +93,7 @@ class PatternMgr:
         try:
             inFile = open(filename, "rb")
             self._templateCount = marshal.load(inFile)
-            self._botName = marshal.load(inFile)
+            self._botProperties = {} if type(marshal.load(inFile)) != dict else marshal.load(inFile)
             self._patternSets = marshal.load(inFile)
             self._root = marshal.load(inFile)
             inFile.close()
@@ -351,7 +349,7 @@ class PatternMgr:
                 return (newPattern, template)
 
         # check bot name
-        if self._BOT_NAME in root and first == self._botName:
+        if self._BOT_NAME in root and first == self._botProperties.get("name"):
             pattern, template = self._match(suffix, thatWords, topicWords, root[self._BOT_NAME])
             if template is not None:
                 newPattern = [first] + pattern

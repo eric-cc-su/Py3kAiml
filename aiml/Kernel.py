@@ -42,10 +42,6 @@ class Kernel:
         self._sessions = {}
         self._addSession(self._globalSessionID)
 
-        # Set up the bot predicates
-        self._botPredicates = {}
-        self.setBotPredicate("name", "Nameless")
-
         # set up the word substitutors (subbers):
         self._subbers = {}
         self._subbers['gender'] = WordSub(DefaultSubs.defaultGender)
@@ -198,8 +194,9 @@ class Kernel:
         If name is not a valid bot predicate, the empty string is returned.        
 
         """
-        try: return self._botPredicates[name]
-        except KeyError: return ""
+        # try: return self._brain.getBotProperty(name)
+        # except KeyError: return ""
+        return self._brain.getBotProperty(name)
 
     def setBotPredicate(self, name, value):
         """Set the value of the specified bot predicate.
@@ -207,11 +204,38 @@ class Kernel:
         If name is not a valid bot predicate, it will be created.
 
         """
-        self._botPredicates[name] = value
-        # Clumsy hack: if updating the bot name, we must update the
-        # name in the brain as well
-        if name == "name":
-            self._brain.setBotName(self.getBotPredicate("name"))
+        self._brain.setBotProperty(name, value)
+
+    def loadBotProperties(self, filename):
+        """
+        Load .properties file in format [property, value]
+
+        :param filename: string - the filepath
+        :return: None
+        """
+        if os.path.isdir(filename):
+            if self._verboseMode: print("ERROR: "+filename+" is a directory. Must be a file or file pattern")
+            return
+        for f in glob.glob(filename):
+            if os.path.splitext(f)[1] != ".properties":
+                print("ERROR: "+filename+" is not a set file")
+                continue
+            if self._verboseMode: print("Loading %s...\n" % f, end=' ')
+            start = time.clock()
+
+            with open(f, 'r') as properties:
+                for line in properties:
+                    setitem = re.match(r"\[\"(\w+ ?)\", \"(.+)\"\]", line)
+                    setitem = None if not setitem else json.loads(setitem.group())
+                    print("botprop: {} ---- {}".format(line, setitem if setitem else None))
+                    if setitem and not (len(setitem) == 1 and setitem[0] == "fooz"):
+                        self.setBotPredicate(setitem[0], setitem[1])
+
+            if self._verboseMode: print("done (%.2f seconds)" % (time.clock() - start))
+        # No files found
+        if len(glob.glob(filename)) == 0:
+            if self._verboseMode: print("ERROR: File "+filename+" does not exist")
+            return
 
     def setTextEncoding(self, encoding):
         """Set the text encoding used when loading AIML files (Latin-1, UTF-8, etc.)."""
@@ -368,14 +392,20 @@ class Kernel:
         if os.path.isdir(filename):
             if self._verboseMode: print("ERROR: "+filename+" is a directory. Must be a file or file pattern")
             return
+        # Load .set files, don't parse
+        if os.path.splitext(filename)[1] == ".set":
+            start = time.clock()
+            self.loadSets(filename)
+            if self._verboseMode: print("done (%.2f seconds)" % (time.clock() - start))
+            return
+        # Bot properties file
+        elif os.path.splitext(filename)[1] == ".properties":
+            start = time.clock()
+            self.loadBotProperties(filename)
+            if self._verboseMode: print("done (%.2f seconds)" % (time.clock() - start))
+            return
         for f in glob.glob(filename):
             if self._verboseMode: print("Loading %s...\n" % f, end=' ')
-            # Load .set files, don't parse
-            if os.path.splitext(f)[1] == ".set":
-                start = time.clock()
-                self.loadSets(f)
-                if self._verboseMode: print("done (%.2f seconds)" % (time.clock() - start))
-                continue
             start = time.clock()
             # Load and parse the AIML file.
             parser = AimlParser.create_parser()
