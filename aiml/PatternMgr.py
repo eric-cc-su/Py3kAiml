@@ -93,7 +93,7 @@ class PatternMgr:
         try:
             inFile = open(filename, "rb")
             self._templateCount = marshal.load(inFile)
-            self._botProperties = {} if type(marshal.load(inFile)) != dict else marshal.load(inFile)
+            self._botProperties = marshal.load(inFile)
             self._patternSets = marshal.load(inFile)
             self._root = marshal.load(inFile)
             inFile.close()

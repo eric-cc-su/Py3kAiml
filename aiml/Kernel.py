@@ -227,7 +227,6 @@ class Kernel:
                 for line in properties:
                     setitem = re.match(r"\[\"(\w+ ?)\", \"(.+)\"\]", line)
                     setitem = None if not setitem else json.loads(setitem.group())
-                    print("botprop: {} ---- {}".format(line, setitem if setitem else None))
                     if setitem and not (len(setitem) == 1 and setitem[0] == "fooz"):
                         self.setBotPredicate(setitem[0], setitem[1])
 
