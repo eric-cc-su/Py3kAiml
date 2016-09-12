@@ -26,7 +26,7 @@ class PatternMgr:
         self._botName = "Nameless"
         punctuation = "\"`~!@#$%^&*()-_=+[{]}\|;:',<.>/?"
         self._puncStripRE = re.compile("[" + re.escape(punctuation) + "]")
-        self._whitespaceRE = re.compile("\s+", re.LOCALE | re.UNICODE)
+        self._whitespaceRE = re.compile("\s+", re.UNICODE)
         self._patternSetRE = re.compile("set_(\w+)_set")
 
     def numTemplates(self):
