@@ -4,12 +4,13 @@ them in a cyclic loop.  A lot of output is generated; piping the results to
 a log file is highly recommended.
 """
 
-import aiml
+# import aiml
+from aiml import Kernel # Use PyAiml dev
 
 # Create the kernels
-kern1 = aiml.Kernel()
+kern1 = Kernel()
 kern1.verbose(False)
-kern2 = aiml.Kernel()
+kern2 = Kernel()
 kern2.verbose(False)
 
 # Initialize the kernels

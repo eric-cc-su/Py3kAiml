@@ -28,7 +28,6 @@ not.
 try: dict
 except: from UserDict import UserDict as dict  # @UnresolvedImport
 
-import configparser  # @UnusedImport
 import re
 import string
 

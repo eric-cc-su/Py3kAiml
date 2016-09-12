@@ -5,8 +5,6 @@
 import marshal
 import pprint
 import re
-import string
-import sys
 
 class PatternMgr:
     # special dictionary keys
@@ -26,7 +24,7 @@ class PatternMgr:
         self._botName = "Nameless"
         punctuation = "\"`~!@#$%^&*()-_=+[{]}\|;:',<.>/?"
         self._puncStripRE = re.compile("[" + re.escape(punctuation) + "]")
-        self._whitespaceRE = re.compile("\s+", re.LOCALE | re.UNICODE)
+        self._whitespaceRE = re.compile("\s+", re.UNICODE)
         self._patternSetRE = re.compile("set_(\w+)_set")
 
     def numTemplates(self):
@@ -274,7 +272,6 @@ class PatternMgr:
 
         # extract the star words from the original, unmutilated input.
         if foundTheRightStar:
-            #print string.join(pattern.split()[start:end+1])
             if starType == 'star': return " ".join(pattern.split()[start:end+1])
             elif starType == 'thatstar': return " ".join(that.split()[start:end+1])
             elif starType == 'topicstar': return " ".join(topic.split()[start:end+1])
@@ -363,17 +360,12 @@ class PatternMgr:
             set_match = self.whichPatternSet(first, root_pattern_sets)
             # Continue into matched pattern set\
             if set_match:
-                # try:
                 pattern, template = self._match(suffix, thatWords, topicWords, root["set_"+set_match+"_set"])
                 if template is not None:
                     newPattern = ["set_"+set_match+"_set"] + pattern
                     if self._debug:
                         print("PATTERNSET - ", first, "\nsuffix:", suffix,  "\nnewPattern: ",newPattern)
                     return (newPattern, template)
-                # except KeyError or TypeError:
-                #     print(root)
-                #     print(first)
-                #     print(set_match)
 
         # check star
         if self._STAR in root:

@@ -8,3 +8,8 @@
 
 .idea/
 .DS_Store
+
+# Vagrant files
+.vagrant/
+Vagrantfile
+vprovision.sh
