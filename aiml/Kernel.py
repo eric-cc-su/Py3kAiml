@@ -5,11 +5,10 @@ from . import DefaultSubs
 from . import Utils
 from .PatternMgr import PatternMgr
 from .WordSub import WordSub
+from .InMemorySessionManager import InMemorySessionManager
 
 from configparser import ConfigParser
-import copy
 import glob
-import json
 import os
 import random
 import re
@@ -30,7 +29,7 @@ class Kernel:
     _outputHistory = "_outputHistory"   # keys to a queue (list) of recent responses.
     _inputStack = "_inputStack"         # Should always be empty in between calls to respond()
 
-    def __init__(self):
+    def __init__(self, *args, _sessionManager=InMemorySessionManager()):
         self._verboseMode = True
         self._version = "PyAIML 0.8.6"
         self._brain = PatternMgr()
@@ -38,9 +37,9 @@ class Kernel:
         self._respondLock = threading.RLock()
         self._textEncoding = "utf-8"
 
-        # set up the sessions        
-        self._sessions = {}
-        self._addSession(self._globalSessionID)
+        # set up the sessions
+        self._sessionManager = _sessionManager
+        self._sessionManager._addSession(self._globalSessionID)
 
         # Set up the bot predicates
         self._botPredicates = {}
@@ -177,7 +176,7 @@ class Kernel:
         string is returned.
 
         """
-        try: return self._sessions[sessionID][name]
+        try: return self._sessionManager._get_session_value(sessionID, name)
         except KeyError: return ""
 
     def setPredicate(self, name, value, sessionID = _globalSessionID):
@@ -189,8 +188,8 @@ class Kernel:
         created.
 
         """
-        self._addSession(sessionID) # add the session, if it doesn't already exist.
-        self._sessions[sessionID][name] = value
+        self._sessionManager._addSession(sessionID) # add the session, if it doesn't already exist.
+        self._sessionManager._set_session_value(sessionID, name, value)
 
     def getBotPredicate(self, name):
         """Retrieve the value of the specified bot predicate.
@@ -320,20 +319,17 @@ class Kernel:
 
     def _addSession(self, sessionID):
         """Create a new session with the specified ID string."""
-        if sessionID in self._sessions:
-            return
-        # Create the session.
-        self._sessions[sessionID] = {
-            # Initialize the special reserved predicates
-            self._inputHistory: [],
-            self._outputHistory: [],
-            self._inputStack: []
-        }
-        
+        self._sessionManager._addSession(sessionID)
+
+    def _get_session_value(self, sessionID, name):
+        return self._sessionManager._get_session_value(sessionID, name)
+
+    def _set_session_value(self, sessionID, name, value):
+        self._sessionManager._set_session_value(sessionID, name, value)
+
     def _deleteSession(self, sessionID):
         """Delete the specified session."""
-        if sessionID in self._sessions:
-            self._sessions.pop(sessionID)
+        self._sessionManager._deleteSession(sessionID)
 
     def getSessionData(self, sessionID = None):
         """Return a copy of the session data dictionary for the
@@ -343,13 +339,7 @@ class Kernel:
         *all* of the individual session dictionaries.
 
         """
-        s = None
-        if sessionID is not None:
-            try: s = self._sessions[sessionID]
-            except KeyError: s = {}
-        else:
-            s = self._sessions
-        return copy.deepcopy(s)
+        return self._sessionManager.getSessionData(sessionID)
 
     def learn(self, filename):
         """Load and learn the contents of the specified AIML file.
