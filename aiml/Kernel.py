@@ -29,7 +29,7 @@ class Kernel:
     _outputHistory = "_outputHistory"   # keys to a queue (list) of recent responses.
     _inputStack = "_inputStack"         # Should always be empty in between calls to respond()
 
-    def __init__(self, *args, _sessionManager=InMemorySessionManager()):
+    def __init__(self, _sessionManager=InMemorySessionManager()):
         self._verboseMode = True
         self._version = "PyAIML 0.8.6"
         self._brain = PatternMgr()
