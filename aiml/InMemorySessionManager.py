@@ -7,6 +7,9 @@ class InMemorySessionManager():
     _outputHistory = "_outputHistory"   # keys to a queue (list) of recent responses.
     _inputStack = "_inputStack"         # Should always be empty in between calls to respond()
 
+    def __init__(self):
+        self._sessions = {}
+
     def _addSession(self, sessionID):
         if not sessionID in self._sessions:
             self._sessions[sessionID] = {
