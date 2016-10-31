@@ -1,12 +1,14 @@
 PyAiml2
 ===
+***v0.8.7***
 
-This repository has been forked from [huntersan9/Py3kAiml](https://github.com/huntersan9/Py3kAiml). 
+This repository has been forked from [huntersan9/Py3kAiml](https://github.com/huntersan9/Py3kAiml).
 The objective of this fork is to update PyAiml for AIML2.0 compatibility.
 
 Additional notes can be viewed in [DOCS.md](DOCS.md)
 
 Apr 2016: Starting v0.9 - Updating code to AIML2.0 standards
+Oct 2016: Don't have time to develop on a regular basis. Will be monitoring and improving on a as-needed basis until schedule clears up some more.
 
 Eric Su
 
@@ -31,7 +33,7 @@ own risk!
 For information on what's new in this version, see the
 CHANGES.txt file.
 
-For information on the state of development, including 
+For information on the state of development, including
 the current level of AIML 1.0.1 compliance, see the
 SUPPORTED_TAGS.txt file.
 
